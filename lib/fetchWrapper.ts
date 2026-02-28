@@ -26,12 +26,29 @@ const sendErrorToParent = (
   }
 };
 
-const fetchWrapper = async (...args) => {
+const fetchWrapper = async (...args: Parameters<typeof fetch>): Promise<Response | undefined> => {
   try {
     const response = await fetch(...args);
 
     // if backend sent a redirect
     if (response.redirected) {
+      const requestUrl = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
+      // For API routes, do NOT navigate away — return a synthetic error response
+      if (requestUrl.startsWith("/api/") || requestUrl.includes("/api/")) {
+        sendErrorToParent(
+          `Backend is starting up. Please try again in a moment.`,
+          503,
+          requestUrl,
+        );
+        return new Response(
+          JSON.stringify({
+            success: false,
+            response: { status: "error", result: {}, message: "The server is starting up. Please try again in a few seconds." },
+            error: "The server is starting up. Please try again in a few seconds.",
+          }),
+          { status: 503, headers: { "Content-Type": "application/json" } }
+        );
+      }
       window.location.href = response.url; // update ui to go to the redirected UI (often /login)
       return;
     }
@@ -112,11 +129,20 @@ const fetchWrapper = async (...args) => {
     return response;
   } catch (error) {
     // network failures
-    const requestUrl = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
+    const reqUrl = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
     sendErrorToParent(
-      `Network error: Cannot connect to backend (${requestUrl})`,
+      `Network error: Cannot connect to backend (${reqUrl})`,
       undefined,
-      requestUrl,
+      reqUrl,
+    );
+    // Return a synthetic error response so callers can handle gracefully
+    return new Response(
+      JSON.stringify({
+        success: false,
+        response: { status: "error", result: {}, message: "Network error. The server may be starting up." },
+        error: "No response from server",
+      }),
+      { status: 503, headers: { "Content-Type": "application/json" } }
     );
   }
 };

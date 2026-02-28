@@ -265,43 +265,69 @@ export default function Page() {
     setLoading(true)
     setActiveAgentId(AGENT_ID)
 
-    try {
-      const result: AIAgentResponse = await callAIAgent(text.trim(), AGENT_ID, { session_id: currentSessionId })
+    const MAX_RETRIES = 2
+    let lastErr = ''
 
-      if (result.success) {
-        const data = result?.response?.result
-        let parsed: any = data
-        if (typeof data === 'string') {
-          parsed = parseLLMJson(data)
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) {
+          await new Promise(r => setTimeout(r, 2000 * attempt))
         }
 
-        const agentMessage = parsed?.message || result?.response?.message || 'Here are my recommendations.'
-        const recommendations = Array.isArray(parsed?.recommendations) ? parsed.recommendations : []
-        const followUpSuggestions = Array.isArray(parsed?.follow_up_suggestions) ? parsed.follow_up_suggestions : []
+        const result: AIAgentResponse = await callAIAgent(text.trim(), AGENT_ID, { session_id: currentSessionId })
 
-        const assistantMsg: ChatMessage = {
-          id: generateId(),
-          role: 'assistant',
-          content: agentMessage,
-          recommendations,
-          followUpSuggestions,
-          timestamp: Date.now(),
+        const isTransient = !result.success && (
+          result.error?.includes('starting up') ||
+          result.error?.includes('503') ||
+          result.error?.includes('Network error') ||
+          result.error?.includes('Cannot connect') ||
+          result.error?.includes('No response from server')
+        )
+
+        if (isTransient && attempt < MAX_RETRIES) {
+          lastErr = result.error || 'Server is starting up...'
+          continue
         }
 
-        const updatedMessages = [...newMessages, assistantMsg]
-        setMessages(updatedMessages)
-        saveCurrentSession(updatedMessages)
-      } else {
-        setError(result?.error ?? 'An error occurred while getting recommendations.')
-        saveCurrentSession(newMessages)
+        if (result.success) {
+          const data = result?.response?.result
+          let parsed: any = data
+          if (typeof data === 'string') {
+            parsed = parseLLMJson(data)
+          }
+
+          const agentMessage = parsed?.message || result?.response?.message || 'Here are my recommendations.'
+          const recommendations = Array.isArray(parsed?.recommendations) ? parsed.recommendations : []
+          const followUpSuggestions = Array.isArray(parsed?.follow_up_suggestions) ? parsed.follow_up_suggestions : []
+
+          const assistantMsg: ChatMessage = {
+            id: generateId(),
+            role: 'assistant',
+            content: agentMessage,
+            recommendations,
+            followUpSuggestions,
+            timestamp: Date.now(),
+          }
+
+          const updatedMessages = [...newMessages, assistantMsg]
+          setMessages(updatedMessages)
+          saveCurrentSession(updatedMessages)
+          setLoading(false)
+          setActiveAgentId(null)
+          return
+        } else {
+          lastErr = result?.error ?? 'An error occurred while getting recommendations.'
+        }
+      } catch (err) {
+        lastErr = err instanceof Error ? err.message : 'Network error. Please try again.'
+        if (attempt < MAX_RETRIES) continue
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Network error. Please try again.')
-      saveCurrentSession(newMessages)
-    } finally {
-      setLoading(false)
-      setActiveAgentId(null)
     }
+
+    setError(lastErr)
+    saveCurrentSession(newMessages)
+    setLoading(false)
+    setActiveAgentId(null)
   }, [loading, messages, currentSessionId, saveCurrentSession])
 
   const handleSend = useCallback(() => {
@@ -314,10 +340,10 @@ export default function Page() {
 
   const handleRetry = useCallback(() => {
     if (lastUserMessage) {
-      setInputValue(lastUserMessage)
       setError(null)
+      sendMessage(lastUserMessage)
     }
-  }, [lastUserMessage])
+  }, [lastUserMessage, sendMessage])
 
   const handleNewSession = useCallback(() => {
     if (messages.length > 0) {
