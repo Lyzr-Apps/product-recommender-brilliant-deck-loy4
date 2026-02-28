@@ -1,0 +1,32 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "Customer Requirements",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "product_rec_agent",
+      "type": "Agent",
+      "label": "Product Recommendation Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "output_node",
+      "type": "Output",
+      "label": "Product Recommendations",
+      "nodeCategory": "end"
+    }
+  ],
+  "edges": [
+    {
+      "source": "input_node",
+      "target": "product_rec_agent"
+    },
+    {
+      "source": "product_rec_agent",
+      "target": "output_node"
+    }
+  ]
+}

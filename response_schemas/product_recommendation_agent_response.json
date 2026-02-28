@@ -1,0 +1,50 @@
+{
+  "agent_name": "Product Recommendation Agent",
+  "agent_id": "69a2771fcc44e0dcaf39e887",
+  "description": "Converses with team members to understand customer requirements (preferences, budget, industry, use case) and searches the product knowledge base to recommend the most relevant products and services, including current promotions and pricing details",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "message": "string",
+    "recommendations": [
+      {
+        "product_name": "string",
+        "description": "string",
+        "price": "string",
+        "match_reason": "string",
+        "promotion": "string",
+        "industry_tags": [
+          "string"
+        ],
+        "use_case_tags": [
+          "string"
+        ]
+      }
+    ],
+    "follow_up_suggestions": [
+      "string"
+    ]
+  },
+  "example_response": {
+    "message": "The agent's conversational response text",
+    "recommendations": [
+      {
+        "product_name": "Name of the recommended product",
+        "description": "Brief product description",
+        "price": "Product price or price range",
+        "match_reason": "Why this product matches the customer's needs",
+        "promotion": "Any active promotion or empty string if none",
+        "industry_tags": [
+          "sample string"
+        ],
+        "use_case_tags": [
+          "sample string"
+        ]
+      }
+    ],
+    "follow_up_suggestions": [
+      "sample string"
+    ]
+  }
+}

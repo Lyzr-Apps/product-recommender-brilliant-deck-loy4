@@ -1,0 +1,31 @@
+{
+  "agents": [
+    {
+      "agent_id": "69a2771fcc44e0dcaf39e887",
+      "name": "Product Recommendation Agent",
+      "description": "Converses with team members to understand customer requirements (preferences, budget, industry, use case) and searches the product knowledge base to recommend the most relevant products and services, including current promotions and pricing details",
+      "agent_type": "json",
+      "has_knowledge_base": true,
+      "rag_id": "69a2770a00c2d274880f6c6f",
+      "rag_name": "productcatalogkbuai3",
+      "provider_id": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.4,
+      "top_p": 0.95,
+      "image_output_config": null,
+      "voice_config": null,
+      "file_output": false,
+      "tool_configs": [],
+      "managed_agents": []
+    }
+  ],
+  "knowledge_bases": [
+    {
+      "rag_id": "69a2770a00c2d274880f6c6f",
+      "rag_name": "productcatalogkbuai3",
+      "name": "Product Catalog KB",
+      "description": "Knowledge base containing product catalog, specifications, pricing, promotions, and service documentation for product recommendations"
+    }
+  ],
+  "schedules": []
+}
