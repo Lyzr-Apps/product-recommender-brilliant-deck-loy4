@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { callAIAgent, type AIAgentResponse } from '@/lib/aiAgent'
 import parseLLMJson from '@/lib/jsonParser'
-import { v4 as uuidv4 } from 'uuid'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { FiUser } from 'react-icons/fi'
@@ -11,6 +10,13 @@ import { FiUser } from 'react-icons/fi'
 import Sidebar from './sections/Sidebar'
 import ChatSection from './sections/ChatSection'
 import HistorySection from './sections/HistorySection'
+
+function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 11)
+}
 
 const AGENT_ID = '69a2771fcc44e0dcaf39e887'
 const STORAGE_KEY = 'product-rec-sessions'
@@ -204,7 +210,7 @@ export default function Page() {
       // ignore parse errors
     }
     // Start a new session
-    setCurrentSessionId(uuidv4())
+    setCurrentSessionId(generateId())
   }, [])
 
   // Persist sessions to localStorage
@@ -242,16 +248,15 @@ export default function Page() {
     })
   }, [currentSessionId])
 
-  const handleSend = useCallback(async () => {
-    const text = inputValue.trim()
-    if (!text || loading) return
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || loading) return
 
     setError(null)
     setLastUserMessage(text)
     const userMsg: ChatMessage = {
-      id: uuidv4(),
+      id: generateId(),
       role: 'user',
-      content: text,
+      content: text.trim(),
       timestamp: Date.now(),
     }
     const newMessages = [...messages, userMsg]
@@ -261,7 +266,7 @@ export default function Page() {
     setActiveAgentId(AGENT_ID)
 
     try {
-      const result: AIAgentResponse = await callAIAgent(text, AGENT_ID, { session_id: currentSessionId })
+      const result: AIAgentResponse = await callAIAgent(text.trim(), AGENT_ID, { session_id: currentSessionId })
 
       if (result.success) {
         const data = result?.response?.result
@@ -275,7 +280,7 @@ export default function Page() {
         const followUpSuggestions = Array.isArray(parsed?.follow_up_suggestions) ? parsed.follow_up_suggestions : []
 
         const assistantMsg: ChatMessage = {
-          id: uuidv4(),
+          id: generateId(),
           role: 'assistant',
           content: agentMessage,
           recommendations,
@@ -297,15 +302,15 @@ export default function Page() {
       setLoading(false)
       setActiveAgentId(null)
     }
-  }, [inputValue, loading, messages, currentSessionId, saveCurrentSession])
+  }, [loading, messages, currentSessionId, saveCurrentSession])
+
+  const handleSend = useCallback(() => {
+    sendMessage(inputValue)
+  }, [inputValue, sendMessage])
 
   const handleFollowUp = useCallback((suggestion: string) => {
-    setInputValue(suggestion)
-    // Auto-send
-    setTimeout(() => {
-      setInputValue(suggestion)
-    }, 50)
-  }, [])
+    sendMessage(suggestion)
+  }, [sendMessage])
 
   const handleRetry = useCallback(() => {
     if (lastUserMessage) {
@@ -319,7 +324,7 @@ export default function Page() {
       saveCurrentSession(messages)
     }
     setMessages([])
-    setCurrentSessionId(uuidv4())
+    setCurrentSessionId(generateId())
     setInputValue('')
     setError(null)
     setActiveTab('chat')
